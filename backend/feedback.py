@@ -1,0 +1,89 @@
+import uuid
+from datetime import datetime
+
+from flask import Blueprint, jsonify, render_template
+
+from .db import get_db
+from .utils import current_user, current_user_id, json_payload, require_login
+
+feedback_bp = Blueprint("feedback", __name__)
+
+
+@feedback_bp.route("/feedback")
+@require_login
+def feedback_page():
+    """Render the feedback page for general or message-specific feedback."""
+    return render_template("feedback.html", user=current_user())
+
+
+@feedback_bp.route("/api/feedback", methods=["POST"])
+@require_login
+def submit_feedback():
+    """Save feedback for either a selected assistant response or the app overall."""
+    data = json_payload()
+    message_id = data.get("message_id")
+    session_id = data.get("session_id")
+    rating = data.get("rating")
+    correctness = data.get("correctness")
+    length_type = data.get("length_type") or data.get("length_rating")
+    comment = data.get("comment")
+
+    db = get_db()
+    if not message_id or not session_id:
+        db.execute(
+            """
+            INSERT INTO general_feedback
+            (id, user_id, rating, correctness, length_type, comment, created_at)
+            VALUES (?,?,?,?,?,?,?)
+            """,
+            (
+                str(uuid.uuid4()),
+                current_user_id(),
+                rating,
+                correctness,
+                length_type,
+                comment,
+                datetime.utcnow().isoformat(),
+            ),
+        )
+        db.commit()
+        return jsonify({"success": True, "scope": "general"})
+
+    message = db.execute(
+        """
+        SELECT id FROM messages
+        WHERE id = ? AND session_id = ? AND user_id = ? AND role = 'assistant'
+        """,
+        (message_id, session_id, current_user_id()),
+    ).fetchone()
+
+    if not message:
+        return jsonify({"error": "Assistant message not found."}), 404
+
+    existing = db.execute(
+        "SELECT id FROM feedback WHERE message_id = ? AND user_id = ?",
+        (message_id, current_user_id()),
+    ).fetchone()
+
+    if existing:
+        db.execute(
+            "UPDATE feedback SET rating = ?, correctness = ?, length_type = ?, comment = ? WHERE message_id = ? AND user_id = ?",
+            (rating, correctness, length_type, comment, message_id, current_user_id()),
+        )
+    else:
+        db.execute(
+            "INSERT INTO feedback (id, message_id, session_id, user_id, rating, correctness, length_type, comment, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+            (str(uuid.uuid4()), message_id, session_id, current_user_id(), rating, correctness, length_type, comment, datetime.utcnow().isoformat()),
+        )
+
+    db.commit()
+    return jsonify({"success": True})
+
+
+@feedback_bp.route("/feedback/submit", methods=["POST"])
+@require_login
+def submit_feedback_frontend():
+    """Alias endpoint for frontend feedback submission."""
+    return submit_feedback()
+
+

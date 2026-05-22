@@ -1,5 +1,6 @@
 'use strict';
 
+// Feedback page controller: validates ratings and sends them to the backend.
 const feedbackPage = {
   currentMessageId: null,
   currentSessionId: null,
@@ -7,26 +8,16 @@ const feedbackPage = {
   selectedCorrectness: null,
   selectedLength: null,
 
+  // Read selected message/session ids from the URL and prepare the form.
   init() {
     const params = new URLSearchParams(window.location.search);
     feedbackPage.currentMessageId = params.get('message_id');
     feedbackPage.currentSessionId = params.get('session_id');
 
     const errorEl = document.getElementById('feedback-error');
-    const statusEl = document.getElementById('feedback-status');
-    const panel = document.getElementById('feedback-panel');
-
     if (!feedbackPage.currentMessageId) {
-      errorEl.textContent = 'Open this feedback page by clicking Rate on an AI response in the chat page.';
-      panel.style.opacity = '0.5';
-      panel.style.pointerEvents = 'none';
-      document.getElementById('btn-submit-feedback').disabled = true;
-      return;
+      errorEl.textContent = 'You can submit general feedback here, or rate a specific chatbot response from the chat page.';
     }
-
-    errorEl.textContent = '';
-    panel.style.opacity = '1';
-    panel.style.pointerEvents = 'auto';
 
     document.querySelectorAll('.star').forEach(star => {
       star.addEventListener('click', () => {
@@ -34,24 +25,19 @@ const feedbackPage = {
       });
     });
 
-    document.querySelectorAll('#correctness-group .toggle-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('#correctness-group .toggle-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        feedbackPage.selectedCorrectness = btn.dataset.value;
-      });
-    });
+    feedbackPage.bindOptionGroup('correctness-group', 'selectedCorrectness');
+    feedbackPage.bindOptionGroup('length-group', 'selectedLength');
+    document.getElementById('btn-submit-feedback').addEventListener('click', feedbackPage.submit);
+  },
 
-    document.querySelectorAll('#length-group .toggle-btn').forEach(btn => {
+  // One-click option groups for correctness and response length.
+  bindOptionGroup(groupId, fieldName) {
+    document.querySelectorAll(`#${groupId} .toggle-btn`).forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('#length-group .toggle-btn').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll(`#${groupId} .toggle-btn`).forEach(item => item.classList.remove('selected'));
         btn.classList.add('selected');
-        feedbackPage.selectedLength = btn.dataset.value;
+        feedbackPage[fieldName] = btn.dataset.value;
       });
-    });
-
-    document.getElementById('btn-submit-feedback').addEventListener('click', async () => {
-      await feedbackPage.submit();
     });
   },
 
@@ -62,24 +48,22 @@ const feedbackPage = {
     });
   },
 
+  // Submit feedback, then return the user to the chat page.
   async submit() {
     const statusEl = document.getElementById('feedback-status');
     statusEl.textContent = '';
     statusEl.className = 'feedback-status';
 
     if (!feedbackPage.selectedRating) {
-      statusEl.textContent = 'Please select a star rating.';
-      statusEl.className = 'feedback-status error';
+      feedbackPage.showError('Please select a star rating.');
       return;
     }
     if (!feedbackPage.selectedCorrectness) {
-      statusEl.textContent = 'Please select a correctness option.';
-      statusEl.className = 'feedback-status error';
+      feedbackPage.showError('Please select a correctness option.');
       return;
     }
     if (!feedbackPage.selectedLength) {
-      statusEl.textContent = 'Please select a length option.';
-      statusEl.className = 'feedback-status error';
+      feedbackPage.showError('Please select a length option.');
       return;
     }
 
@@ -100,15 +84,21 @@ const feedbackPage = {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || `HTTP ${res.status}`);
-      }
-      statusEl.textContent = '✅ Feedback saved. Thank you!';
-      statusEl.className = 'feedback-status';
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+      statusEl.textContent = 'Feedback saved. Returning to chat...';
+      setTimeout(() => {
+        window.location.href = '/chat';
+      }, 600);
     } catch (err) {
-      statusEl.textContent = `❌ ${err.message}`;
-      statusEl.className = 'feedback-status error';
+      feedbackPage.showError(err.message);
     }
+  },
+
+  showError(message) {
+    const statusEl = document.getElementById('feedback-status');
+    statusEl.textContent = message;
+    statusEl.className = 'feedback-status error';
   },
 };
 
