@@ -1683,3 +1683,7 @@ Press CTRL+C to quit
 127.0.0.1 - - [22/May/2026 18:57:32] "GET /feedback HTTP/1.1" 200 -
 127.0.0.1 - - [22/May/2026 18:57:33] "GET /static/css/style.css HTTP/1.1" 304 -
 127.0.0.1 - - [22/May/2026 18:57:33] "GET /static/js/feedback.js HTTP/1.1" 304 -
+ * Detected change in 'C:\\Users\\LENOVO\\OneDrive\\Desktop\\Combine\\backend\\chat.py', reloading
+ * Restarting with watchdog (windowsapi)
+ * Debugger is active!
+ * Debugger PIN: 752-387-959

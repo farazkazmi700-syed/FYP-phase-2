@@ -1,4 +1,11 @@
+venv/
+__pycache__/
 .env
+.env.*
+*.pyc
+node_modules/
+.idea/
+.vscode/.env
 .env.*
 __pycache__/
 *.py[cod]
