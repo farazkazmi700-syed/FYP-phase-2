@@ -193,6 +193,79 @@ def generate_analytical_tables(sessions: list[dict], metrics: dict) -> dict:
     }
 
 
+def chart(title: str, chart_type: str, labels: list, values: list) -> dict:
+    """FR20: return one chart-ready graph definition."""
+    return {
+        "title": title,
+        "type": chart_type,
+        "labels": labels,
+        "values": values,
+    }
+
+
+def generate_visual_graphs(sessions: list[dict], metrics: dict, tables: dict) -> dict:
+    """FR20: generate visual graph data for analytics charts."""
+    topic_counts = {}
+    response_labels = []
+    response_values = []
+
+    for session_data in sessions:
+        for message in session_data["messages"]:
+            if message.get("role") == "user":
+                topic = message.get("message_domain") or "Machine Learning"
+                topic_counts[topic] = topic_counts.get(topic, 0) + 1
+
+            if message.get("response_time_ms") is not None:
+                response_labels.append(message.get("created_at") or message["id"])
+                response_values.append(message["response_time_ms"])
+
+    # FR20: return graph-ready values for pie, bar, and line charts.
+    return {
+        "topic_distribution": chart(
+            "Topic distribution",
+            "pie",
+            list(topic_counts.keys()),
+            list(topic_counts.values()),
+        ),
+        "accuracy_per_topic": chart(
+            "Accuracy per topic",
+            "bar",
+            [row["topic"] for row in tables["topic_vs_accuracy"]],
+            [row["accuracy"] for row in tables["topic_vs_accuracy"]],
+        ),
+        "accuracy_vs_phase": chart(
+            "Accuracy vs phase",
+            "line",
+            [row["phase"] for row in tables["phase_wise_accuracy"]],
+            [row["accuracy"] for row in tables["phase_wise_accuracy"]],
+        ),
+        "correctness_per_reply": chart(
+            "Correctness per reply",
+            "bar",
+            [row["message_id"] for row in tables["reply_correctness_table"]],
+            [row["accuracy"] for row in tables["reply_correctness_table"]],
+        ),
+        "response_time_trend": chart(
+            "Response time trend",
+            "line",
+            response_labels,
+            response_values,
+        ),
+        "rating_distribution": chart(
+            "Rating distribution",
+            "bar",
+            [row["rating"] for row in tables["rating_distribution"]],
+            [row["count"] for row in tables["rating_distribution"]],
+        ),
+        "length_preference": chart(
+            "Length preference",
+            "pie",
+            [row["length_type"] for row in tables["length_preference"]],
+            [row["count"] for row in tables["length_preference"]],
+        ),
+    }
+
+
 @analytics_bp.route("/api/analytics/sessions", methods=["GET"])
 @require_login
 def get_analytics_sessions():
@@ -245,8 +318,10 @@ def get_analytics_sessions():
         sessions.append(session_data)
 
     metrics = compute_core_metrics(sessions)
+    tables = generate_analytical_tables(sessions, metrics)
     return jsonify({
         "sessions": sessions,
         "metrics": metrics,
-        "tables": generate_analytical_tables(sessions, metrics),
+        "tables": tables,
+        "graphs": generate_visual_graphs(sessions, metrics, tables),
     })
