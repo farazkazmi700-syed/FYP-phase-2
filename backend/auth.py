@@ -50,6 +50,51 @@ def get_google_oauth_flow():
     )
 
 
+def upsert_google_user_profile(user_info: dict) -> dict:
+    """Create or retrieve the local profile for an authenticated Google user."""
+    google_id = user_info["id"]
+    email = user_info["email"]
+    name = user_info.get("name", "")
+    picture_url = user_info.get("picture", "")
+
+    db = get_db()
+    user_row = db.execute(
+        "SELECT id, google_id, email, name, picture_url FROM users WHERE google_id = ?",
+        (google_id,),
+    ).fetchone()
+
+    if user_row:
+        # FR6: after Google OAuth succeeds, retrieve the existing user profile
+        # and refresh local display fields so the session reflects Google.
+        db.execute(
+            "UPDATE users SET email = ?, name = ?, picture_url = ? WHERE id = ?",
+            (email, name, picture_url, user_row["id"]),
+        )
+        db.commit()
+        return {
+            "id": user_row["id"],
+            "google_id": google_id,
+            "email": email,
+            "name": name,
+            "picture_url": picture_url,
+        }
+
+    # FR6: first-time Google OAuth users get a local profile record.
+    user_id = str(uuid.uuid4())
+    db.execute(
+        "INSERT INTO users (id, google_id, email, name, picture_url, created_at) VALUES (?,?,?,?,?,?)",
+        (user_id, google_id, email, name, picture_url, now_iso()),
+    )
+    db.commit()
+    return {
+        "id": user_id,
+        "google_id": google_id,
+        "email": email,
+        "name": name,
+        "picture_url": picture_url,
+    }
+
+
 @auth_bp.route("/")
 def index():
     """Redirect users to chat when logged in, otherwise show login."""
@@ -71,6 +116,7 @@ def login():
 def auth_login():
     """Start the Google OAuth login flow."""
     try:
+        # FR6: send anonymous users into Google's OAuth consent flow.
         flow = get_google_oauth_flow()
         session["post_auth_redirect"] = safe_redirect_target(request.args.get("next") or url_for("chat.chat"))
         authorization_url, state = flow.authorization_url(
@@ -105,33 +151,15 @@ def auth_callback():
         user_info_response.raise_for_status()
         user_info = user_info_response.json()
 
-        google_id = user_info["id"]
-        email = user_info["email"]
-        name = user_info.get("name", "")
-        picture_url = user_info.get("picture", "")
-
-        db = get_db()
-        user_row = db.execute(
-            "SELECT id FROM users WHERE google_id = ?",
-            (google_id,),
-        ).fetchone()
-
-        if user_row:
-            user_id = user_row["id"]
-        else:
-            user_id = str(uuid.uuid4())
-            db.execute(
-                "INSERT INTO users (id, google_id, email, name, picture_url, created_at) VALUES (?,?,?,?,?,?)",
-                (user_id, google_id, email, name, picture_url, now_iso()),
-            )
-            db.commit()
+        profile = upsert_google_user_profile(user_info)
 
         redirect_target = session.pop("post_auth_redirect", url_for("chat.chat"))
         session.clear()
-        session["user_id"] = user_id
-        session["username"] = name
-        session["email"] = email
-        session["picture_url"] = picture_url
+        # FR6: store the retrieved or newly created profile in the session.
+        session["user_id"] = profile["id"]
+        session["username"] = profile["name"]
+        session["email"] = profile["email"]
+        session["picture_url"] = profile["picture_url"]
 
         return redirect(redirect_target)
     except Exception as exc:

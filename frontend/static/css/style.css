@@ -17,6 +17,9 @@
   --red: #7f1d1d;
   --red-hover: #991b1b;
   --red-soft: rgba(127, 29, 29, 0.22);
+  --glass: rgba(0, 0, 0, 0.72);
+  --glass-soft: rgba(7, 10, 16, 0.62);
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
   --white: #fff;
   --black: #000;
   --ok: #22c55e;
@@ -200,7 +203,7 @@ textarea:focus-visible {
 .sidebar-mark {
   display: inline-grid;
   place-items: center;
-  border: 1px solid var(black);
+  border: 1px solid var(--border-strong);
   background: linear-gradient(135deg, var(--blue-hover), var(--black));
   color: var(--white);
   font-weight: 800;
@@ -231,11 +234,12 @@ textarea:focus-visible {
 
 .login-card,
 .feedback-panel {
-  border: 1px solid var(--border);
+  border: 1px solid var(--green-soft);
   border-radius: var(--radius);
-  background: rgba(29, 39, 60, 0.429);
+  background: var(--glass);
   padding: clamp(18px, 4vw, 28px);
   backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
 }
 
 .login-card {
@@ -281,6 +285,28 @@ textarea:focus-visible {
 }
 
 /* Main chat layout. */
+.chat-body,
+.page-body {
+  /* Theme sync: chat and feedback reuse the login page image, glass panels, and blue/green accents. */
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(87, 119, 207, 0.54), rgba(5, 7, 13, 0.84)),
+    url("/static/img/login-ai.png") center / cover fixed no-repeat;
+}
+
+.chat-body::before,
+.page-body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 72% 36%, rgba(37, 99, 235, 0.2), transparent 22rem),
+    radial-gradient(circle at 18% 80%, rgba(34, 197, 94, 0.13), transparent 18rem),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.68));
+}
+
 .chat-body {
   display: flex;
   height: 100vh;
@@ -295,7 +321,8 @@ textarea:focus-visible {
   height: 100%;
   flex-direction: column;
   border-right: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.461);
+  background: var(--glass);
+  backdrop-filter: blur(14px);
   transition: transform 0.2s ease, width 0.2s ease, min-width 0.2s ease;
 }
 
@@ -311,7 +338,8 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--border);
-  background: rgba(10, 10, 10, 0.596);
+  background: var(--glass-soft);
+  backdrop-filter: blur(14px);
 }
 
 .sidebar-header {
@@ -420,8 +448,7 @@ textarea:focus-visible {
   flex: 1;
   flex-direction: column;
   background:
-    linear-gradient(180deg, rgba(37, 36, 36, 0.82), rgba(0, 0, 0, 0.95)),
-    var(--bg);
+    linear-gradient(180deg, rgba(5, 7, 13, 0.28), rgba(0, 0, 0, 0.64));
 }
 
 .chat-header {
@@ -497,7 +524,9 @@ textarea:focus-visible {
   text-align: center;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: rgba(13, 17, 26, 0.52);
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
   padding: clamp(20px, 5vw, 36px);
 }
 
@@ -585,14 +614,15 @@ textarea:focus-visible {
   max-width: 660px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--panel);
+  background: var(--glass);
+  backdrop-filter: blur(12px);
   padding: clamp(12px, 2.5vw, 16px);
   word-break: break-word;
 }
 
 .message.user .msg-bubble {
   border-color: var(--green);
-  background: var(--green);
+  background: rgba(34, 197, 94, 0.16);
   color: var(--white);
 }
 
@@ -654,7 +684,8 @@ textarea:focus-visible {
 
 .input-area {
   border-top: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.92);
+  background: var(--glass);
+  backdrop-filter: blur(14px);
   padding: 14px var(--page-pad);
 }
 
@@ -703,10 +734,6 @@ textarea:focus-visible {
 /* Feedback page. */
 .page-body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(230, 230, 230, 0.12), transparent 28rem),
-    radial-gradient(circle at bottom right, rgba(127, 29, 29, 0.18), transparent 24rem),
-    var(--bg);
 }
 
 .page-shell {
@@ -718,7 +745,8 @@ textarea:focus-visible {
   width: var(--sidebar-w);
   min-width: var(--sidebar-w);
   border-right: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.94);
+  background: var(--glass);
+  backdrop-filter: blur(14px);
 }
 
 .page-main {
@@ -757,9 +785,7 @@ textarea:focus-visible {
 
 .feedback-panel {
   width: min(760px, 100%);
-  border-color: var(--border);
-  background: var(--panel);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+  border-color: var(--green-soft);
 }
 
 .feedback-header {
@@ -777,7 +803,7 @@ textarea:focus-visible {
 
 .feedback-row label {
   min-width: 104px;
-  color: var(--muted);
+  color: var(--text);
   font-size: 13px;
   font-weight: 700;
 }
