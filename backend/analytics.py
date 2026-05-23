@@ -69,9 +69,15 @@ def compute_core_metrics(sessions: list[dict]) -> dict:
         "To the Point": 0,
         "Lengthy": 0,
     }
+    correctness_counts = {
+        "correct_replies_count": 0,
+        "partially_correct_replies_count": 0,
+        "incorrect_replies_count": 0,
+    }
 
     for session_data in sessions:
         for message in session_data["messages"]:
+            correctness = message.get("correctness")
             score = accuracy_score(message.get("correctness"))
             if score is not None:
                 accuracy_per_reply.append({
@@ -84,6 +90,14 @@ def compute_core_metrics(sessions: list[dict]) -> dict:
                 accuracy_by_topic.setdefault(topic, []).append(score)
                 accuracy_by_phase.setdefault(phase, []).append(score)
 
+            # FR18: count correctness categories from submitted feedback.
+            if correctness == "Correct":
+                correctness_counts["correct_replies_count"] += 1
+            elif correctness == "Partial":
+                correctness_counts["partially_correct_replies_count"] += 1
+            elif correctness == "Incorrect":
+                correctness_counts["incorrect_replies_count"] += 1
+
             if message.get("response_time_ms") is not None:
                 response_times.append(message["response_time_ms"])
 
@@ -93,6 +107,15 @@ def compute_core_metrics(sessions: list[dict]) -> dict:
             length_type = message.get("length_type")
             if length_type in length_distribution:
                 length_distribution[length_type] += 1
+
+    total_correctness = sum(correctness_counts.values())
+    correctness_percentage = None
+    if total_correctness:
+        weighted_correct = (
+            correctness_counts["correct_replies_count"]
+            + correctness_counts["partially_correct_replies_count"] * 0.5
+        )
+        correctness_percentage = round((weighted_correct / total_correctness) * 100, 2)
 
     # FR17: summarize grouped lists into concise analytics values.
     return {
@@ -116,6 +139,10 @@ def compute_core_metrics(sessions: list[dict]) -> dict:
             "average": average(ratings),
         },
         "length_distribution": length_distribution,
+        "correctness_evaluation": {
+            **correctness_counts,
+            "overall_correctness_percentage": correctness_percentage,
+        },
     }
 
 
