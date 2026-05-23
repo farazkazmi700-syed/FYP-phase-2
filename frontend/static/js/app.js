@@ -247,7 +247,7 @@ const app = {
     }
   },
 
-  // FR12: freeze chat input after every assistant response until feedback is saved.
+  // FR12/FR13: freeze chat input after every assistant response until feedback is saved.
   requireFeedback(messageId) {
     app.pendingFeedbackMessageId = messageId;
     app.selectedRating = 0;
@@ -257,15 +257,18 @@ const app = {
     document.querySelectorAll('#mandatory-feedback .toggle-btn').forEach(btn => btn.classList.remove('selected'));
     document.getElementById('chat-feedback-status').textContent = '';
     document.getElementById('mandatory-feedback').classList.remove('hidden');
+    // FR13: locked composer blocks new text input, send, and new-chat actions.
     app.setComposerLocked(true);
   },
 
+  // FR13: central input-control switch used to lock and unlock the chat.
   setComposerLocked(locked) {
     document.getElementById('message-input').disabled = locked;
     document.getElementById('btn-send').disabled = locked || app.isLoading;
     document.getElementById('btn-new-chat').disabled = locked;
   },
 
+  // FR13: successful feedback completion unlocks chat input for the next turn.
   async submitMandatoryFeedback() {
     const statusEl = document.getElementById('chat-feedback-status');
     statusEl.textContent = '';

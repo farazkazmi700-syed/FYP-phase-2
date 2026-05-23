@@ -87,7 +87,7 @@ def load_session_context(db, session_id: str):
 
 
 def session_has_pending_feedback(db, session_id: str) -> bool:
-    """FR12: block the next message until every assistant response is rated."""
+    """FR12/FR13: detect whether chat input must stay blocked for feedback."""
     row = db.execute(
         """
         SELECT messages.id
@@ -131,6 +131,7 @@ def send_message_frontend():
     if session_id:
         if not user_owns_session(session_id):
             return jsonify({"error": "Conversation not found."}), 404
+        # FR13: reject new input until feedback for the previous response exists.
         if session_has_pending_feedback(db, session_id):
             return jsonify({"error": "Please submit feedback for the previous response before sending another message."}), 428
         timestamp = datetime.utcnow().isoformat()
