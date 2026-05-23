@@ -52,8 +52,8 @@ def init_db():
         """
     )
 
-    # FR7/FR11: messages are scoped by session_id and store each interaction's
-    # user/model text, timestamp, topic label, and response timing metadata.
+    # FR7/FR11/FR15: messages are scoped by session_id and store each
+    # interaction's topic label, domain, timestamp, and response timing data.
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS messages (
@@ -63,6 +63,7 @@ def init_db():
             role        TEXT NOT NULL,
             content     TEXT NOT NULL,
             topic_label TEXT,
+            message_domain TEXT,
             created_at  TEXT NOT NULL,
             request_started_at  TEXT,
             response_received_at TEXT,
@@ -134,6 +135,9 @@ def init_db():
     # FR11: topic_label lets every stored user/model interaction be grouped by topic.
     if "topic_label" not in message_columns:
         cursor.execute("ALTER TABLE messages ADD COLUMN topic_label TEXT")
+    # FR15: message_domain stores the analytics domain classification.
+    if "message_domain" not in message_columns:
+        cursor.execute("ALTER TABLE messages ADD COLUMN message_domain TEXT")
     db.commit()
 
     db.close()

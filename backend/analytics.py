@@ -31,6 +31,7 @@ def get_analytics_sessions():
             messages.role,
             messages.content,
             messages.topic_label,
+            messages.message_domain,
             messages.created_at,
             messages.response_time_ms,
             feedback.rating,
