@@ -62,6 +62,9 @@ def init_db():
             role        TEXT NOT NULL,
             content     TEXT NOT NULL,
             created_at  TEXT NOT NULL,
+            request_started_at  TEXT,
+            response_received_at TEXT,
+            response_time_ms     INTEGER,
             FOREIGN KEY (session_id) REFERENCES chat_sessions(id)
         )
         """
@@ -113,9 +116,19 @@ def init_db():
     db.commit()
 
     # Keep old local databases compatible with the current feedback form.
-    columns = [row[1] for row in cursor.execute("PRAGMA table_info(feedback)").fetchall()]
-    if "comment" not in columns:
+    feedback_columns = [row[1] for row in cursor.execute("PRAGMA table_info(feedback)").fetchall()]
+    if "comment" not in feedback_columns:
         cursor.execute("ALTER TABLE feedback ADD COLUMN comment TEXT")
         db.commit()
+
+    # FR10: keep old message tables compatible with response-time tracking.
+    message_columns = [row[1] for row in cursor.execute("PRAGMA table_info(messages)").fetchall()]
+    if "request_started_at" not in message_columns:
+        cursor.execute("ALTER TABLE messages ADD COLUMN request_started_at TEXT")
+    if "response_received_at" not in message_columns:
+        cursor.execute("ALTER TABLE messages ADD COLUMN response_received_at TEXT")
+    if "response_time_ms" not in message_columns:
+        cursor.execute("ALTER TABLE messages ADD COLUMN response_time_ms INTEGER")
+    db.commit()
 
     db.close()

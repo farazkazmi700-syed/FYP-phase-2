@@ -15,6 +15,7 @@ const api = {
   },
 
   async sendMessage(content, sessionId) {
+    // FR9: send the user's query to the backend route that calls LLaMA 3.
     const res = await fetch('/chat/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -50,7 +51,7 @@ const ui = {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   },
 
-  appendMessage(role, content, messageId, timestamp) {
+  appendMessage(role, content, messageId, timestamp, responseTimeMs) {
     document.getElementById('welcome-message')?.remove();
 
     const container = document.getElementById('messages-container');
@@ -65,6 +66,7 @@ const ui = {
         <div class="msg-bubble">${ui.escapeHtml(content).replaceAll('\n', '<br>')}</div>
         <div class="msg-meta">
           <span>${ui.formatTime(timestamp)}</span>
+          ${isAssistant && Number.isFinite(responseTimeMs) ? `<span>${responseTimeMs} ms</span>` : ''}
           ${isAssistant && messageId ? `<button class="btn-feedback-trigger" data-id="${messageId}">Feedback</button>` : ''}
         </div>
       </div>
@@ -93,7 +95,7 @@ const ui = {
     `;
   },
 
-  // Typing indicator: shown while waiting for the backend response.
+  // FR9: show a real-time waiting indicator while LLaMA 3 generates a response.
   showTyping() {
     const container = document.getElementById('messages-container');
     const typing = document.createElement('div');
@@ -166,8 +168,8 @@ const app = {
     });
   },
 
-  // FR7: send the user's message with the active session id so backend state
-  // stays isolated from every other browser chat session.
+  // FR8: keep sending every message to the same session id until the user
+  // starts a new chat, which enables continuous multi-turn conversation.
   async handleSend() {
     const input = document.getElementById('message-input');
     const content = input.value.trim();
@@ -188,7 +190,8 @@ const app = {
       const result = await api.sendMessage(content, app.currentSessionId);
       app.currentSessionId = result.session_id;
       ui.hideTyping();
-      ui.appendMessage('assistant', result.response, result.message_id, result.timestamp);
+      // FR9/FR10: display the generated LLaMA 3 response with its tracked response time.
+      ui.appendMessage('assistant', result.response, result.message_id, result.timestamp, result.response_time_ms);
     } catch (err) {
       ui.hideTyping();
       ui.appendMessage('assistant', `Error: ${err.message}. Please try again.`, null, new Date().toISOString());
@@ -199,7 +202,8 @@ const app = {
     }
   },
 
-  // FR7: start a new independent chat by asking the backend for a unique ID.
+  // FR7/FR8: start a fresh independent multi-turn chat by asking the backend
+  // for a unique session id.
   async startNewChat() {
     ui.renderWelcome();
     document.getElementById('message-input').focus();

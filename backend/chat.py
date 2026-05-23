@@ -61,6 +61,19 @@ def user_owns_session(session_id: str) -> bool:
     return row is not None
 
 
+def load_session_context(db, session_id: str):
+    """FR8: load all previous turns so the assistant can continue the conversation."""
+    return db.execute(
+        """
+        SELECT role, content
+        FROM messages
+        WHERE session_id = ?
+        ORDER BY created_at ASC
+        """,
+        (session_id,),
+    ).fetchall()
+
+
 @chat_bp.route("/chat/session/new", methods=["POST"])
 @require_login
 def new_chat_session():
@@ -77,7 +90,7 @@ def new_chat_session():
 @chat_bp.route("/chat/send", methods=["POST"])
 @require_login
 def send_message_frontend():
-    """FR7: save one turn inside the active independent conversation session."""
+    """FR8: append a turn and answer using the full active session history."""
     payload = json_payload()
     content = payload.get("content", "").strip()
     session_id = payload.get("session_id")
@@ -101,32 +114,55 @@ def send_message_frontend():
         (user_msg_id, session_id, current_user_id(), "user", content, timestamp),
     )
 
-    # FR7: only messages from this session are sent to the model, so each chat
-    # keeps its own conversation state independent from other sessions.
-    context_rows = db.execute(
-        "SELECT role, content FROM messages WHERE session_id = ? ORDER BY created_at ASC",
-        (session_id,),
-    ).fetchall()
+    # FR8: include every topic and turn from this session so users can move
+    # naturally between topics without losing previous conversational context.
+    context_rows = load_session_context(db, session_id)
 
     try:
+        # FR10: capture the request timestamp immediately before calling LLaMA 3.
+        request_started_at = datetime.utcnow()
+        # FR9: send the session context to LLaMA 3 and wait for its generated reply.
         assistant_content = query_llama(build_llm_messages(context_rows))
+        # FR10: capture the response timestamp immediately after LLaMA 3 returns.
+        response_received_at = datetime.utcnow()
     except GroqAPIError as exc:
         db.rollback()
         return jsonify({"error": str(exc)}), 502
 
-    reply_ts = datetime.utcnow().isoformat()
+    # FR10: response time is calculated from the response and request timestamps.
+    response_time_ms = round((response_received_at - request_started_at).total_seconds() * 1000)
+    request_ts = request_started_at.isoformat()
+    reply_ts = response_received_at.isoformat()
     assistant_msg_id = str(uuid.uuid4())
     db.execute(
-        "INSERT INTO messages (id, session_id, user_id, role, content, created_at) VALUES (?,?,?,?,?,?)",
-        (assistant_msg_id, session_id, current_user_id(), "assistant", assistant_content, reply_ts),
+        """
+        INSERT INTO messages
+        (id, session_id, user_id, role, content, created_at, request_started_at, response_received_at, response_time_ms)
+        VALUES (?,?,?,?,?,?,?,?,?)
+        """,
+        (
+            assistant_msg_id,
+            session_id,
+            current_user_id(),
+            "assistant",
+            assistant_content,
+            reply_ts,
+            request_ts,
+            reply_ts,
+            response_time_ms,
+        ),
     )
     db.execute("UPDATE chat_sessions SET updated_at = ? WHERE id = ?", (reply_ts, session_id))
     db.commit()
 
+    # FR9/FR10: return the generated response and timing data to the browser.
     return jsonify({
         "session_id": session_id,
         "user_message_id": user_msg_id,
         "message_id": assistant_msg_id,
         "response": assistant_content,
         "timestamp": reply_ts,
+        "request_started_at": request_ts,
+        "response_received_at": reply_ts,
+        "response_time_ms": response_time_ms,
     })

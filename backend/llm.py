@@ -8,12 +8,13 @@ class GroqAPIError(RuntimeError):
 
 
 def build_llm_messages(context_rows) -> list:
-    """Build the OpenAI-compatible message list sent to Groq."""
+    """FR8: build the model prompt from the complete multi-turn session context."""
     return [
         {
             "role": "system",
             "content": (
                 "You are a helpful, accurate, and concise AI assistant. "
+                "Continue the current session naturally across multiple turns and topics. "
                 "Provide clear, structured responses. If you are unsure, say so honestly."
             ),
         }
@@ -21,14 +22,18 @@ def build_llm_messages(context_rows) -> list:
 
 
 def query_llama(messages: list) -> str:
-    """Send the current conversation context to Groq and return the assistant text."""
+    """FR9: send the user query/context to the configured LLaMA 3 model."""
     if not Config.GROQ_API_KEY:
         return "GROQ_API_KEY is not configured. Please add it to your .env file."
 
+    # FR9: Groq exposes LLaMA 3 through an OpenAI-compatible chat endpoint.
     headers = {
         "Authorization": f"Bearer {Config.GROQ_API_KEY}",
         "Content-Type": "application/json",
     }
+
+    # FR9: the complete chat context is sent so LLaMA 3 can generate the next
+    # assistant response for the active conversation.
     payload = {
         "model": Config.LLAMA_MODEL,
         "messages": messages,
@@ -41,6 +46,7 @@ def query_llama(messages: list) -> str:
         response = requests.post(Config.GROQ_API_URL, headers=headers, json=payload, timeout=60)
         response.raise_for_status()
         data = response.json()
+        # FR9: return the generated LLaMA 3 text for the frontend to display.
         return data["choices"][0]["message"]["content"]
     except requests.exceptions.Timeout as exc:
         raise GroqAPIError("Request timed out. Please try again.") from exc
