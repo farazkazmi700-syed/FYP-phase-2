@@ -28,6 +28,18 @@ def session_title(first_message: str | None = None) -> str:
     return first_message[:40] + ("..." if len(first_message) > 40 else "")
 
 
+def topic_label_from_message(message: str) -> str:
+    """FR11: create a compact topic label stored with each interaction."""
+    words = [
+        word.strip(".,!?;:()[]{}\"'").lower()
+        for word in message.split()
+        if word.strip(".,!?;:()[]{}\"'")
+    ]
+    if not words:
+        return "general"
+    return " ".join(words[:4])[:60]
+
+
 def create_chat_session(db, first_message: str | None = None) -> tuple[str, str]:
     """FR7: create a unique private session for one independent conversation."""
     session_id = str(uuid.uuid4())
@@ -108,10 +120,17 @@ def send_message_frontend():
         # get an isolated UUID conversation on their first message.
         session_id, timestamp = create_chat_session(db, content)
 
+    # FR11: derive a topic label from the user's query and store it with both
+    # the user message and the model response for this interaction.
+    topic_label = topic_label_from_message(content)
     user_msg_id = str(uuid.uuid4())
     db.execute(
-        "INSERT INTO messages (id, session_id, user_id, role, content, created_at) VALUES (?,?,?,?,?,?)",
-        (user_msg_id, session_id, current_user_id(), "user", content, timestamp),
+        """
+        INSERT INTO messages
+        (id, session_id, user_id, role, content, topic_label, created_at)
+        VALUES (?,?,?,?,?,?,?)
+        """,
+        (user_msg_id, session_id, current_user_id(), "user", content, topic_label, timestamp),
     )
 
     # FR8: include every topic and turn from this session so users can move
@@ -137,8 +156,8 @@ def send_message_frontend():
     db.execute(
         """
         INSERT INTO messages
-        (id, session_id, user_id, role, content, created_at, request_started_at, response_received_at, response_time_ms)
-        VALUES (?,?,?,?,?,?,?,?,?)
+        (id, session_id, user_id, role, content, topic_label, created_at, request_started_at, response_received_at, response_time_ms)
+        VALUES (?,?,?,?,?,?,?,?,?,?)
         """,
         (
             assistant_msg_id,
@@ -146,6 +165,7 @@ def send_message_frontend():
             current_user_id(),
             "assistant",
             assistant_content,
+            topic_label,
             reply_ts,
             request_ts,
             reply_ts,
@@ -165,4 +185,5 @@ def send_message_frontend():
         "request_started_at": request_ts,
         "response_received_at": reply_ts,
         "response_time_ms": response_time_ms,
+        "topic_label": topic_label,
     })

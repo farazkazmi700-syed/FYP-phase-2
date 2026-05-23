@@ -52,7 +52,8 @@ def init_db():
         """
     )
 
-    # FR7: messages are scoped by session_id so each conversation keeps its own state.
+    # FR7/FR11: messages are scoped by session_id and store each interaction's
+    # user/model text, timestamp, topic label, and response timing metadata.
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS messages (
@@ -61,6 +62,7 @@ def init_db():
             user_id     TEXT NOT NULL,
             role        TEXT NOT NULL,
             content     TEXT NOT NULL,
+            topic_label TEXT,
             created_at  TEXT NOT NULL,
             request_started_at  TEXT,
             response_received_at TEXT,
@@ -129,6 +131,9 @@ def init_db():
         cursor.execute("ALTER TABLE messages ADD COLUMN response_received_at TEXT")
     if "response_time_ms" not in message_columns:
         cursor.execute("ALTER TABLE messages ADD COLUMN response_time_ms INTEGER")
+    # FR11: topic_label lets every stored user/model interaction be grouped by topic.
+    if "topic_label" not in message_columns:
+        cursor.execute("ALTER TABLE messages ADD COLUMN topic_label TEXT")
     db.commit()
 
     db.close()
