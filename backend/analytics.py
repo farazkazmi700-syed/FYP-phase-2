@@ -146,6 +146,53 @@ def compute_core_metrics(sessions: list[dict]) -> dict:
     }
 
 
+def generate_analytical_tables(sessions: list[dict], metrics: dict) -> dict:
+    """FR19: build analytical tables from computed session metrics."""
+    reply_correctness_table = []
+    rating_counts = {}
+
+    for session_data in sessions:
+        for message in session_data["messages"]:
+            if message.get("correctness"):
+                score = accuracy_score(message.get("correctness"))
+                reply_correctness_table.append({
+                    "message_id": message["id"],
+                    "session_id": message["session_id"],
+                    "topic": message.get("topic_label") or "general",
+                    "phase": message.get("session_phase"),
+                    "correctness": message.get("correctness"),
+                    "accuracy": score,
+                })
+
+            rating = message.get("rating")
+            if rating is not None:
+                rating_counts[rating] = rating_counts.get(rating, 0) + 1
+
+    # FR19: expose analytics as simple row-based tables for dashboards/reports.
+    return {
+        "topic_vs_accuracy": [
+            {"topic": topic, "accuracy": accuracy}
+            for topic, accuracy in metrics["accuracy_per_topic"].items()
+        ],
+        "reply_correctness_table": reply_correctness_table,
+        "phase_wise_accuracy": [
+            {"phase": phase, "accuracy": accuracy}
+            for phase, accuracy in metrics["accuracy_per_phase"].items()
+        ],
+        "response_time_summary": [
+            metrics["response_time_statistics"]
+        ],
+        "rating_distribution": [
+            {"rating": rating, "count": count}
+            for rating, count in sorted(rating_counts.items())
+        ],
+        "length_preference": [
+            {"length_type": length_type, "count": count}
+            for length_type, count in metrics["length_distribution"].items()
+        ],
+    }
+
+
 @analytics_bp.route("/api/analytics/sessions", methods=["GET"])
 @require_login
 def get_analytics_sessions():
@@ -197,7 +244,9 @@ def get_analytics_sessions():
         session_data["phases"] = segment_session_messages(session_data["messages"])
         sessions.append(session_data)
 
+    metrics = compute_core_metrics(sessions)
     return jsonify({
         "sessions": sessions,
-        "metrics": compute_core_metrics(sessions),
+        "metrics": metrics,
+        "tables": generate_analytical_tables(sessions, metrics),
     })
