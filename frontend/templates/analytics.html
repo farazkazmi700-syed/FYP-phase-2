@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analytics - Multi-Turn AI Chatbot</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body class="page-body">
+  <div class="page-shell">
+    <!-- Dashboard navigation. -->
+    <aside class="page-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo"><span class="sidebar-mark">AI</span> Multi-Turn AI Chatbot</div>
+      </div>
+      <nav class="page-nav" aria-label="Main navigation">
+        <a class="menu-item" href="/chat">Chat</a>
+        <a class="menu-item" href="/feedback">Feedback</a>
+        <a class="menu-item active" href="/analytics">Analytics</a>
+      </nav>
+    </aside>
+
+    <!-- FR21: analytics dashboard displays insights, graphs, and tables. -->
+    <main class="page-main analytics-main">
+      <div class="page-title-group">
+        <div class="logo-icon">AI</div>
+        <div>
+          <h1>Analytics Dashboard</h1>
+          <p class="login-subtitle">Session insights, topic performance, tables, and graphs.</p>
+        </div>
+      </div>
+
+      <div class="page-alert" id="analytics-status">Loading analytics...</div>
+
+      <section class="analytics-summary" id="session-insights" aria-label="Session-level insights"></section>
+      <section class="analytics-panel" id="topic-performance" aria-label="Topic-based performance"></section>
+      <section class="analytics-grid" id="analytics-graphs" aria-label="Analytics graphs"></section>
+      <section class="analytics-panel" id="analytics-tables" aria-label="Analytics tables"></section>
+    </main>
+  </div>
+
+  <script src="/static/js/analytics.js"></script>
+</body>
+</html>

@@ -1,9 +1,16 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, render_template
 
 from .db import get_db
-from .utils import current_user_id, require_login
+from .utils import current_user, current_user_id, require_login
 
 analytics_bp = Blueprint("analytics", __name__)
+
+
+@analytics_bp.route("/analytics", methods=["GET"])
+@require_login
+def analytics_dashboard():
+    """FR21: display the analytics dashboard page for logged-in users."""
+    return render_template("analytics.html", user=current_user())
 
 
 def phase_for_message(index: int, total_messages: int) -> str:
