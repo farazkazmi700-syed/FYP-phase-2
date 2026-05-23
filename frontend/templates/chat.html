@@ -58,13 +58,13 @@
     <!-- Conversation messages render here. -->
     <div class="messages-container" id="messages-container">
       <div class="welcome-message" id="welcome-message">
-        <div class="welcome-icon">🤖</div>
-        <h2>Hello, {{ user.get('name', 'there') }}.</h2>
-        <p>Ask anything 😀 Am your AI Multi-Turn Chatbot!</p>
+        <div class="welcome-icon">&#129302;</div>
+        <h2>{{ user.get('name', 'User') }}</h2>
+        <p>Ask me anything-- Am your AI Multi-Turn Chatbot!</p>
         <div class="suggestion-chips">
-          <button class="chip" onclick="app.sendSuggestion('Explain quantum computing in simple terms')">Quantum computing</button>
-          <button class="chip" onclick="app.sendSuggestion('Write a Python function to sort a list')">Python help</button>
-          <button class="chip" onclick="app.sendSuggestion('What are 5 tips for productive studying?')">Study tips</button>
+          <button class="chip" onclick="app.sendSuggestion('Explain machine learning in simple terms')">Machine learning</button>
+          <button class="chip" onclick="app.sendSuggestion('Write a Python hello world program')">Python code</button>
+          <button class="chip" onclick="app.sendSuggestion('Give me 3 tips for better writing')">Writing tips</button>
         </div>
       </div>
     </div>
@@ -127,6 +127,7 @@
     window.CURRENT_USER = {
       name: "{{ user.get('name', '') | e }}",
       email: "{{ user.get('email', '') | e }}",
+      picture: "{{ user.get('picture', '') | e }}",
     };
   </script>
   <script src="/static/js/app.js"></script>

@@ -1,7 +1,10 @@
+import json
+import uuid
+
 from flask import Blueprint, jsonify, render_template
 
 from .db import get_db
-from .utils import current_user, current_user_id, require_login
+from .utils import current_user, current_user_id, now_iso, require_login
 
 analytics_bp = Blueprint("analytics", __name__)
 
@@ -273,13 +276,8 @@ def generate_visual_graphs(sessions: list[dict], metrics: dict, tables: dict) ->
     }
 
 
-@analytics_bp.route("/api/analytics/sessions", methods=["GET"])
-@require_login
-def get_analytics_sessions():
-    """Fetch stored chat sessions and messages for analytics analysis."""
-    db = get_db()
-
-    # FR14: retrieve stored session data for the logged-in user from the database.
+def build_analytics_payload(db, user_id: str) -> dict:
+    """Build the complete analytics payload for one user."""
     session_rows = db.execute(
         """
         SELECT id, title, created_at, updated_at
@@ -287,7 +285,7 @@ def get_analytics_sessions():
         WHERE user_id = ?
         ORDER BY updated_at DESC
         """,
-        (current_user_id(),),
+        (user_id,),
     ).fetchall()
 
     message_rows = db.execute(
@@ -309,7 +307,7 @@ def get_analytics_sessions():
         WHERE messages.user_id = ?
         ORDER BY messages.created_at ASC
         """,
-        (current_user_id(),),
+        (user_id,),
     ).fetchall()
 
     messages_by_session = {row["id"]: [] for row in session_rows}
@@ -326,9 +324,33 @@ def get_analytics_sessions():
 
     metrics = compute_core_metrics(sessions)
     tables = generate_analytical_tables(sessions, metrics)
-    return jsonify({
+    return {
         "sessions": sessions,
         "metrics": metrics,
         "tables": tables,
         "graphs": generate_visual_graphs(sessions, metrics, tables),
-    })
+    }
+
+
+def store_final_analytics_summary(db, user_id: str) -> str:
+    """FR22: permanently save final analytics when the user session ends."""
+    summary_id = str(uuid.uuid4())
+    summary = build_analytics_payload(db, user_id)
+    db.execute(
+        """
+        INSERT INTO analytics_summaries (id, user_id, summary_json, created_at)
+        VALUES (?,?,?,?)
+        """,
+        (summary_id, user_id, json.dumps(summary), now_iso()),
+    )
+    db.commit()
+    return summary_id
+
+
+@analytics_bp.route("/api/analytics/sessions", methods=["GET"])
+@require_login
+def get_analytics_sessions():
+    """Fetch stored chat sessions and messages for analytics analysis."""
+    db = get_db()
+    # FR14: retrieve stored session data for the logged-in user from the database.
+    return jsonify(build_analytics_payload(db, current_user_id()))

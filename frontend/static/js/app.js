@@ -63,6 +63,14 @@ const ui = {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   },
 
+  userAvatarHtml() {
+    const user = window.CURRENT_USER || {};
+    const name = user.name || 'User';
+    const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3B82F6&color=ffffff`;
+    const src = user.picture || fallback;
+    return `<img class="msg-avatar-img" src="${ui.escapeHtml(src)}" alt="${ui.escapeHtml(name)}" />`;
+  },
+
   appendMessage(role, content, messageId, timestamp, responseTimeMs) {
     document.getElementById('welcome-message')?.remove();
 
@@ -73,7 +81,7 @@ const ui = {
 
     const isAssistant = role === 'assistant';
     message.innerHTML = `
-      <div class="msg-avatar">${isAssistant ? '🤖' : 'You'}</div>
+      <div class="msg-avatar">${isAssistant ? '🤖' : ui.userAvatarHtml()}</div>
       <div class="msg-content">
         <div class="msg-bubble">${ui.escapeHtml(content).replaceAll('\n', '<br>')}</div>
         <div class="msg-meta">
@@ -93,10 +101,11 @@ const ui = {
   },
 
   renderWelcome() {
+    const userName = ui.escapeHtml((window.CURRENT_USER && window.CURRENT_USER.name) || 'User');
     document.getElementById('messages-container').innerHTML = `
       <div class="welcome-message" id="welcome-message">
-        <div class="welcome-icon">🤖</div>
-        <h2>New Chat</h2>
+        <div class="welcome-icon">&#129302;</div>
+        <h2>New Chat, ${userName}</h2>
         <p>Ask me anything. This page keeps only the current conversation.</p>
         <div class="suggestion-chips">
           <button class="chip" onclick="app.sendSuggestion('Explain machine learning in simple terms')">Machine learning</button>

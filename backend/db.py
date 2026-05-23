@@ -116,6 +116,18 @@ def init_db():
         """
     )
 
+    # FR22: store the final analytics summary when a user session ends.
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS analytics_summaries (
+            id              TEXT PRIMARY KEY,
+            user_id         TEXT NOT NULL,
+            summary_json    TEXT NOT NULL,
+            created_at      TEXT NOT NULL
+        )
+        """
+    )
+
     db.commit()
 
     # Keep old local databases compatible with the current feedback form.
