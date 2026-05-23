@@ -38,6 +38,7 @@ def init_db():
         """
     )
 
+    # FR7: chat_sessions stores one unique conversation container per chat.
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS chat_sessions (
@@ -51,6 +52,7 @@ def init_db():
         """
     )
 
+    # FR7: messages are scoped by session_id so each conversation keeps its own state.
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS messages (

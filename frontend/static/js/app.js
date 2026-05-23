@@ -2,6 +2,18 @@
 
 // Network calls: send chat messages and check server health.
 const api = {
+  async createSession() {
+    const res = await fetch('/chat/session/new', {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  },
+
   async sendMessage(content, sessionId) {
     const res = await fetch('/chat/send', {
       method: 'POST',
@@ -129,13 +141,14 @@ const app = {
   async init() {
     app.bindEvents();
     await app.checkConnection();
+    await app.startNewChat();
     app.autoResizeInput();
   },
 
-  // Register button, keyboard, logout, and input-resize actions.
+  // Register button, keyboard, logout, and input-resize actions for the chat page.
   bindEvents() {
     document.getElementById('btn-send').addEventListener('click', app.handleSend);
-    document.getElementById('btn-new-chat').addEventListener('click', app.startNewChat);
+    document.getElementById('btn-new-chat').addEventListener('click', () => app.startNewChat());
     document.getElementById('btn-logout')?.addEventListener('click', app.handleLogout);
     document.getElementById('message-input').addEventListener('keydown', event => {
       if (event.key === 'Enter' && !event.shiftKey) {
@@ -153,7 +166,8 @@ const app = {
     });
   },
 
-  // Send the user's message, render the reply, and keep the current session id.
+  // FR7: send the user's message with the active session id so backend state
+  // stays isolated from every other browser chat session.
   async handleSend() {
     const input = document.getElementById('message-input');
     const content = input.value.trim();
@@ -167,6 +181,10 @@ const app = {
     ui.showTyping();
 
     try {
+      if (!app.currentSessionId) {
+        const session = await api.createSession();
+        app.currentSessionId = session.session_id;
+      }
       const result = await api.sendMessage(content, app.currentSessionId);
       app.currentSessionId = result.session_id;
       ui.hideTyping();
@@ -181,11 +199,16 @@ const app = {
     }
   },
 
-  // Clear only the current screen conversation.
-  startNewChat() {
-    app.currentSessionId = null;
+  // FR7: start a new independent chat by asking the backend for a unique ID.
+  async startNewChat() {
     ui.renderWelcome();
     document.getElementById('message-input').focus();
+    try {
+      const session = await api.createSession();
+      app.currentSessionId = session.session_id;
+    } catch {
+      app.currentSessionId = null;
+    }
   },
 
   sendSuggestion(text) {

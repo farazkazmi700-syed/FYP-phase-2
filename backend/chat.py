@@ -21,20 +21,39 @@ def chat():
     )
 
 
-def create_chat_session(db, first_message: str) -> tuple[str, str]:
-    """Create a private backing session for the current browser conversation."""
+def session_title(first_message: str | None = None) -> str:
+    """Return a short title for a chat session."""
+    if not first_message:
+        return "New Chat"
+    return first_message[:40] + ("..." if len(first_message) > 40 else "")
+
+
+def create_chat_session(db, first_message: str | None = None) -> tuple[str, str]:
+    """FR7: create a unique private session for one independent conversation."""
     session_id = str(uuid.uuid4())
     timestamp = datetime.utcnow().isoformat()
-    title = first_message[:40] + ("..." if len(first_message) > 40 else "")
     db.execute(
         "INSERT INTO chat_sessions (id, user_id, title, created_at, updated_at) VALUES (?,?,?,?,?)",
-        (session_id, current_user_id(), title or "New Chat", timestamp, timestamp),
+        (session_id, current_user_id(), session_title(first_message), timestamp, timestamp),
     )
     return session_id, timestamp
 
 
+def rename_session_from_first_message(db, session_id: str, first_message: str) -> None:
+    """FR7: replace the temporary title once the session receives its first turn."""
+    existing_messages = db.execute(
+        "SELECT COUNT(*) AS total FROM messages WHERE session_id = ?",
+        (session_id,),
+    ).fetchone()
+    if existing_messages and existing_messages["total"] == 0:
+        db.execute(
+            "UPDATE chat_sessions SET title = ?, updated_at = ? WHERE id = ?",
+            (session_title(first_message), datetime.utcnow().isoformat(), session_id),
+        )
+
+
 def user_owns_session(session_id: str) -> bool:
-    """Validate that the active browser conversation belongs to this user."""
+    """FR7: validate that the active browser conversation belongs to this user."""
     row = get_db().execute(
         "SELECT id FROM chat_sessions WHERE id = ? AND user_id = ?",
         (session_id, current_user_id()),
@@ -42,10 +61,23 @@ def user_owns_session(session_id: str) -> bool:
     return row is not None
 
 
+@chat_bp.route("/chat/session/new", methods=["POST"])
+@require_login
+def new_chat_session():
+    """FR7: generate a unique session ID before the first chat message is sent."""
+    db = get_db()
+    session_id, timestamp = create_chat_session(db)
+    db.commit()
+    return jsonify({
+        "session_id": session_id,
+        "created_at": timestamp,
+    })
+
+
 @chat_bp.route("/chat/send", methods=["POST"])
 @require_login
 def send_message_frontend():
-    """Save the active conversation turn and return the assistant reply."""
+    """FR7: save one turn inside the active independent conversation session."""
     payload = json_payload()
     content = payload.get("content", "").strip()
     session_id = payload.get("session_id")
@@ -57,7 +89,10 @@ def send_message_frontend():
         if not user_owns_session(session_id):
             return jsonify({"error": "Conversation not found."}), 404
         timestamp = datetime.utcnow().isoformat()
+        rename_session_from_first_message(db, session_id, content)
     else:
+        # Backward compatibility: clients that do not pre-create a session still
+        # get an isolated UUID conversation on their first message.
         session_id, timestamp = create_chat_session(db, content)
 
     user_msg_id = str(uuid.uuid4())
@@ -66,7 +101,8 @@ def send_message_frontend():
         (user_msg_id, session_id, current_user_id(), "user", content, timestamp),
     )
 
-    # The hidden backing session preserves context for the current chat only.
+    # FR7: only messages from this session are sent to the model, so each chat
+    # keeps its own conversation state independent from other sessions.
     context_rows = db.execute(
         "SELECT role, content FROM messages WHERE session_id = ? ORDER BY created_at ASC",
         (session_id,),
