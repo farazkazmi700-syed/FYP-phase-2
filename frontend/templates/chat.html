@@ -68,6 +68,40 @@
       </div>
     </div>
 
+    <!-- FR12: required feedback panel shown after each assistant response. -->
+    <section class="mandatory-feedback hidden" id="mandatory-feedback" aria-live="polite">
+      <div class="mandatory-feedback-header">Feedback required</div>
+      <div class="feedback-row compact">
+        <label>Rating</label>
+        <div class="star-rating" id="chat-rating-group">
+          <button class="star" type="button" data-value="1">★</button>
+          <button class="star" type="button" data-value="2">★</button>
+          <button class="star" type="button" data-value="3">★</button>
+          <button class="star" type="button" data-value="4">★</button>
+        </div>
+      </div>
+      <div class="feedback-row compact">
+        <label>Correctness</label>
+        <div class="btn-group" id="chat-correctness-group">
+          <button class="toggle-btn" type="button" data-value="Correct">Correct</button>
+          <button class="toggle-btn" type="button" data-value="Partial">Partial</button>
+          <button class="toggle-btn" type="button" data-value="Incorrect">Incorrect</button>
+        </div>
+      </div>
+      <div class="feedback-row compact">
+        <label>Length</label>
+        <div class="btn-group" id="chat-length-group">
+          <button class="toggle-btn" type="button" data-value="Short">Short</button>
+          <button class="toggle-btn" type="button" data-value="To the Point">To the Point</button>
+          <button class="toggle-btn" type="button" data-value="Lengthy">Lengthy</button>
+        </div>
+      </div>
+      <div class="mandatory-feedback-actions">
+        <span class="feedback-status" id="chat-feedback-status"></span>
+        <button class="btn-primary" id="btn-chat-feedback" type="button">Submit feedback</button>
+      </div>
+    </section>
+
     <!-- Message composer. -->
     <div class="input-area">
       <div class="input-wrapper">

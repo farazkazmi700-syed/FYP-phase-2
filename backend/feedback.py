@@ -19,7 +19,7 @@ def feedback_page():
 @feedback_bp.route("/api/feedback", methods=["POST"])
 @require_login
 def submit_feedback():
-    """Save feedback for either a selected assistant response or the app overall."""
+    """FR12: save required response feedback before the user can continue chatting."""
     data = json_payload()
     message_id = data.get("message_id")
     session_id = data.get("session_id")
@@ -48,6 +48,14 @@ def submit_feedback():
         )
         db.commit()
         return jsonify({"success": True, "scope": "general"})
+
+    # FR12: message feedback is mandatory and must include all required fields.
+    if rating not in (1, 2, 3, 4):
+        return jsonify({"error": "Rating from 1 to 4 is required."}), 400
+    if correctness not in ("Correct", "Partial", "Incorrect"):
+        return jsonify({"error": "Correctness must be Correct, Partial, or Incorrect."}), 400
+    if length_type not in ("Short", "To the Point", "Lengthy"):
+        return jsonify({"error": "Length type must be Short, To the Point, or Lengthy."}), 400
 
     message = db.execute(
         """

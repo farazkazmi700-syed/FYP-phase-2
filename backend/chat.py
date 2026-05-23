@@ -86,6 +86,24 @@ def load_session_context(db, session_id: str):
     ).fetchall()
 
 
+def session_has_pending_feedback(db, session_id: str) -> bool:
+    """FR12: block the next message until every assistant response is rated."""
+    row = db.execute(
+        """
+        SELECT messages.id
+        FROM messages
+        LEFT JOIN feedback ON feedback.message_id = messages.id
+        WHERE messages.session_id = ?
+          AND messages.user_id = ?
+          AND messages.role = 'assistant'
+          AND feedback.id IS NULL
+        LIMIT 1
+        """,
+        (session_id, current_user_id()),
+    ).fetchone()
+    return row is not None
+
+
 @chat_bp.route("/chat/session/new", methods=["POST"])
 @require_login
 def new_chat_session():
@@ -113,6 +131,8 @@ def send_message_frontend():
     if session_id:
         if not user_owns_session(session_id):
             return jsonify({"error": "Conversation not found."}), 404
+        if session_has_pending_feedback(db, session_id):
+            return jsonify({"error": "Please submit feedback for the previous response before sending another message."}), 428
         timestamp = datetime.utcnow().isoformat()
         rename_session_from_first_message(db, session_id, content)
     else:

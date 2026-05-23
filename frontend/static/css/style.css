@@ -868,6 +868,42 @@ textarea:focus-visible {
   color: var(--error);
 }
 
+.hidden {
+  display: none !important;
+}
+
+.mandatory-feedback {
+  width: var(--content-w);
+  margin: 0 auto 12px;
+  border: 1px solid var(--green);
+  border-radius: var(--radius);
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  padding: 14px;
+}
+
+.mandatory-feedback-header {
+  margin-bottom: 10px;
+  font-weight: 800;
+}
+
+.feedback-row.compact {
+  margin-bottom: 10px;
+}
+
+.star {
+  border: 0;
+  background: transparent;
+}
+
+.mandatory-feedback-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+
 .page-actions {
   display: flex;
   width: min(760px, 100%);
@@ -971,6 +1007,7 @@ textarea:focus-visible {
   }
 
   .input-wrapper,
+  .mandatory-feedback-actions,
   .feedback-row {
     flex-direction: column;
     align-items: stretch;

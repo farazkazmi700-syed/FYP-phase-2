@@ -29,6 +29,18 @@ const api = {
     return res.json();
   },
 
+  async submitFeedback(payload) {
+    const res = await fetch('/feedback/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  },
+
   async checkHealth() {
     const res = await fetch('/api/health', { credentials: 'include' });
     return res.json();
@@ -139,6 +151,10 @@ const feedback = {
 const app = {
   currentSessionId: null,
   isLoading: false,
+  pendingFeedbackMessageId: null,
+  selectedRating: 0,
+  selectedCorrectness: null,
+  selectedLength: null,
 
   async init() {
     app.bindEvents();
@@ -152,11 +168,39 @@ const app = {
     document.getElementById('btn-send').addEventListener('click', app.handleSend);
     document.getElementById('btn-new-chat').addEventListener('click', () => app.startNewChat());
     document.getElementById('btn-logout')?.addEventListener('click', app.handleLogout);
+    document.getElementById('btn-chat-feedback').addEventListener('click', app.submitMandatoryFeedback);
     document.getElementById('message-input').addEventListener('keydown', event => {
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
         app.handleSend();
       }
+    });
+    app.bindMandatoryFeedbackControls();
+  },
+
+  // FR12: collect the mandatory rating, correctness, and length selections.
+  bindMandatoryFeedbackControls() {
+    document.querySelectorAll('#chat-rating-group .star').forEach(star => {
+      star.addEventListener('click', () => app.setRating(parseInt(star.dataset.value, 10)));
+    });
+    app.bindFeedbackOptionGroup('chat-correctness-group', 'selectedCorrectness');
+    app.bindFeedbackOptionGroup('chat-length-group', 'selectedLength');
+  },
+
+  bindFeedbackOptionGroup(groupId, fieldName) {
+    document.querySelectorAll(`#${groupId} .toggle-btn`).forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll(`#${groupId} .toggle-btn`).forEach(item => item.classList.remove('selected'));
+        btn.classList.add('selected');
+        app[fieldName] = btn.dataset.value;
+      });
+    });
+  },
+
+  setRating(value) {
+    app.selectedRating = value;
+    document.querySelectorAll('#chat-rating-group .star').forEach(star => {
+      star.classList.toggle('active', parseInt(star.dataset.value, 10) <= value);
     });
   },
 
@@ -173,7 +217,7 @@ const app = {
   async handleSend() {
     const input = document.getElementById('message-input');
     const content = input.value.trim();
-    if (!content || app.isLoading) return;
+    if (!content || app.isLoading || app.pendingFeedbackMessageId) return;
 
     app.isLoading = true;
     input.value = '';
@@ -192,19 +236,69 @@ const app = {
       ui.hideTyping();
       // FR9/FR10: display the generated LLaMA 3 response with its tracked response time.
       ui.appendMessage('assistant', result.response, result.message_id, result.timestamp, result.response_time_ms);
+      app.requireFeedback(result.message_id);
     } catch (err) {
       ui.hideTyping();
       ui.appendMessage('assistant', `Error: ${err.message}. Please try again.`, null, new Date().toISOString());
     } finally {
       app.isLoading = false;
-      document.getElementById('btn-send').disabled = false;
-      input.focus();
+      app.setComposerLocked(Boolean(app.pendingFeedbackMessageId));
+      if (!app.pendingFeedbackMessageId) input.focus();
+    }
+  },
+
+  // FR12: freeze chat input after every assistant response until feedback is saved.
+  requireFeedback(messageId) {
+    app.pendingFeedbackMessageId = messageId;
+    app.selectedRating = 0;
+    app.selectedCorrectness = null;
+    app.selectedLength = null;
+    document.querySelectorAll('#chat-rating-group .star').forEach(star => star.classList.remove('active'));
+    document.querySelectorAll('#mandatory-feedback .toggle-btn').forEach(btn => btn.classList.remove('selected'));
+    document.getElementById('chat-feedback-status').textContent = '';
+    document.getElementById('mandatory-feedback').classList.remove('hidden');
+    app.setComposerLocked(true);
+  },
+
+  setComposerLocked(locked) {
+    document.getElementById('message-input').disabled = locked;
+    document.getElementById('btn-send').disabled = locked || app.isLoading;
+    document.getElementById('btn-new-chat').disabled = locked;
+  },
+
+  async submitMandatoryFeedback() {
+    const statusEl = document.getElementById('chat-feedback-status');
+    statusEl.textContent = '';
+    statusEl.className = 'feedback-status';
+
+    if (!app.selectedRating || !app.selectedCorrectness || !app.selectedLength) {
+      statusEl.textContent = 'Select rating, correctness, and length.';
+      statusEl.className = 'feedback-status error';
+      return;
+    }
+
+    try {
+      await api.submitFeedback({
+        message_id: app.pendingFeedbackMessageId,
+        session_id: app.currentSessionId,
+        rating: app.selectedRating,
+        correctness: app.selectedCorrectness,
+        length_type: app.selectedLength,
+      });
+      app.pendingFeedbackMessageId = null;
+      document.getElementById('mandatory-feedback').classList.add('hidden');
+      app.setComposerLocked(false);
+      document.getElementById('message-input').focus();
+    } catch (err) {
+      statusEl.textContent = err.message;
+      statusEl.className = 'feedback-status error';
     }
   },
 
   // FR7/FR8: start a fresh independent multi-turn chat by asking the backend
   // for a unique session id.
   async startNewChat() {
+    if (app.pendingFeedbackMessageId) return;
     ui.renderWelcome();
     document.getElementById('message-input').focus();
     try {
