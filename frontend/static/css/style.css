@@ -136,7 +136,7 @@ textarea:focus-visible {
 .toggle-btn:hover,
 .chip:hover,
 .menu-item:hover {
-  border-color: var(--green);
+  border-color: var(--purple, var(--green));
   background: var(--panel-soft);
 }
 
@@ -287,12 +287,37 @@ textarea:focus-visible {
 /* Main chat layout. */
 .chat-body,
 .page-body {
-  /* Theme sync: chat and feedback reuse the login page image, glass panels, and blue/green accents. */
+  --bg: #0F172A;
+  --panel: #1E293B;
+  --panel-soft: #263449;
+  --input: #0F172A;
+  --text: #F8FAFC;
+  --muted: #94A3B8;
+  --border: #334155;
+  --border-strong: #475569;
+  --blue: #3B82F6;
+  --blue-hover: #2563EB;
+  --blue-soft: rgba(59, 130, 246, 0.16);
+  --purple: #8B5CF6;
+  --purple-hover: #7C3AED;
+  --purple-soft: rgba(139, 92, 246, 0.18);
+  --green: #10B981;
+  --green-hover: #059669;
+  --green-soft: rgba(16, 185, 129, 0.16);
+  --yellow: #FACC15;
+  --red: #8B5CF6;
+  --red-hover: #7C3AED;
+  --red-soft: rgba(139, 92, 246, 0.18);
+  --glass: #1E293B;
+  --glass-soft: #162033;
+  --shadow: 0 18px 45px rgba(2, 6, 23, 0.35);
+  --white: #F8FAFC;
+  --black: #0F172A;
+  --ok: #10B981;
+  --error: #8B5CF6;
   position: relative;
   isolation: isolate;
-  background:
-    linear-gradient(180deg, rgba(87, 119, 207, 0.54), rgba(5, 7, 13, 0.84)),
-    url("/static/img/login-ai.png") center / cover fixed no-repeat;
+  background: var(--bg);
 }
 
 .chat-body::before,
@@ -301,10 +326,7 @@ textarea:focus-visible {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background:
-    radial-gradient(circle at 72% 36%, rgba(37, 99, 235, 0.2), transparent 22rem),
-    radial-gradient(circle at 18% 80%, rgba(34, 197, 94, 0.13), transparent 18rem),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.68));
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.08), rgba(15, 23, 42, 0));
 }
 
 .chat-body {
@@ -322,7 +344,7 @@ textarea:focus-visible {
   flex-direction: column;
   border-right: 1px solid var(--border);
   background: var(--glass);
-  backdrop-filter: blur(14px);
+  backdrop-filter: none;
   transition: transform 0.2s ease, width 0.2s ease, min-width 0.2s ease;
 }
 
@@ -339,7 +361,7 @@ textarea:focus-visible {
   align-items: center;
   border-bottom: 1px solid var(--border);
   background: var(--glass-soft);
-  backdrop-filter: blur(14px);
+  backdrop-filter: none;
 }
 
 .sidebar-header {
@@ -383,14 +405,14 @@ textarea:focus-visible {
 }
 
 .menu-item.active {
-  border-color: var(--green);
-  background: var(--green-soft);
+  border-color: var(--blue);
+  background: var(--blue-soft);
   color: var(--white);
 }
 
 .feedback-menu-item {
-  border-color: var(--blue);
-  background: var(--blue-soft);
+  border-color: var(--purple);
+  background: var(--purple-soft);
   color: var(--white);
 }
 
@@ -447,8 +469,7 @@ textarea:focus-visible {
   min-height: 100vh;
   flex: 1;
   flex-direction: column;
-  background:
-    linear-gradient(180deg, rgba(5, 7, 13, 0.28), rgba(0, 0, 0, 0.64));
+  background: var(--bg);
 }
 
 .chat-header {
@@ -474,10 +495,10 @@ textarea:focus-visible {
 }
 
 .model-badge {
-  border: 1px solid var(--blue);
+  border: 1px solid var(--purple);
   border-radius: 999px;
   padding: 3px 8px;
-  background: var(--blue-soft);
+  background: var(--purple-soft);
   color: var(--white);
   font-size: 11px;
   white-space: nowrap;
@@ -525,7 +546,7 @@ textarea:focus-visible {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--glass);
-  backdrop-filter: blur(14px);
+  backdrop-filter: none;
   box-shadow: var(--shadow);
   padding: clamp(20px, 5vw, 36px);
 }
@@ -591,16 +612,16 @@ textarea:focus-visible {
 }
 
 .message.assistant .msg-avatar {
-  border-color: var(--blue);
-  background: linear-gradient(135deg, var(--blue-soft), var(--red-soft));
+  border-color: var(--purple);
+  background: var(--purple-soft);
   color: var(--white);
   font-size: 17px;
 }
 
 .message.user .msg-avatar {
-  border-color: var(--green);
-  background: var(--green);
-  color: var(--black);
+  border-color: var(--blue);
+  background: var(--blue);
+  color: var(--white);
 }
 
 .msg-content {
@@ -615,14 +636,14 @@ textarea:focus-visible {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--glass);
-  backdrop-filter: blur(12px);
+  backdrop-filter: none;
   padding: clamp(12px, 2.5vw, 16px);
   word-break: break-word;
 }
 
 .message.user .msg-bubble {
-  border-color: var(--green);
-  background: rgba(34, 197, 94, 0.16);
+  border-color: var(--blue);
+  background: var(--blue-soft);
   color: var(--white);
 }
 
@@ -685,7 +706,7 @@ textarea:focus-visible {
 .input-area {
   border-top: 1px solid var(--border);
   background: var(--glass);
-  backdrop-filter: blur(14px);
+  backdrop-filter: none;
   padding: 14px var(--page-pad);
 }
 
@@ -746,7 +767,7 @@ textarea:focus-visible {
   min-width: var(--sidebar-w);
   border-right: 1px solid var(--border);
   background: var(--glass);
-  backdrop-filter: blur(14px);
+  backdrop-filter: none;
 }
 
 .page-main {
@@ -785,7 +806,7 @@ textarea:focus-visible {
 
 .feedback-panel {
   width: min(760px, 100%);
-  border-color: var(--green-soft);
+  border-color: var(--purple);
 }
 
 .feedback-header {
@@ -822,7 +843,7 @@ textarea:focus-visible {
 
 .star.active,
 .star:hover {
-  color: var(--green);
+  color: var(--yellow);
 }
 
 .btn-group {
@@ -839,9 +860,9 @@ textarea:focus-visible {
 }
 
 .toggle-btn.selected {
-  border-color: var(--green);
-  background: var(--green);
-  color: var(--black);
+  border-color: var(--blue);
+  background: var(--blue);
+  color: var(--white);
 }
 
 .feedback-row textarea {
@@ -873,13 +894,13 @@ textarea:focus-visible {
 }
 
 .mandatory-feedback {
-  width: var(--content-w);
-  margin: 0 auto 12px;
-  border: 1px solid var(--green);
+  width: min(760px, calc(100% - (var(--page-pad) * 2)));
+  margin: 0 auto 10px;
+  border: 1px solid var(--yellow, var(--border-strong));
   border-radius: var(--radius);
   background: var(--glass);
-  backdrop-filter: blur(14px);
-  padding: 14px;
+  backdrop-filter: none;
+  padding: clamp(14px, 2vw, 18px);
 }
 
 .mandatory-feedback-header {
@@ -888,7 +909,29 @@ textarea:focus-visible {
 }
 
 .feedback-row.compact {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px 14px;
   margin-bottom: 10px;
+}
+
+.feedback-row.compact label {
+  min-width: 0;
+}
+
+.mandatory-feedback .btn-group {
+  gap: 8px;
+}
+
+.mandatory-feedback .toggle-btn {
+  flex: 0 1 auto;
+  min-height: 38px;
+  padding: 8px 12px;
+}
+
+.mandatory-feedback .star-rating {
+  gap: 6px;
 }
 
 .star {
@@ -901,7 +944,9 @@ textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 4px;
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
 
 .page-actions {
@@ -968,6 +1013,11 @@ textarea:focus-visible {
   .connection-status {
     width: 100%;
   }
+
+  .mandatory-feedback {
+    width: calc(100% - (var(--page-pad) * 2));
+    margin-bottom: 10px;
+  }
 }
 
 @media (max-width: 560px) {
@@ -1010,7 +1060,36 @@ textarea:focus-visible {
   .mandatory-feedback-actions,
   .feedback-row {
     flex-direction: column;
-    align-items: stretch;
+    align-items: fit-content;
+  }
+
+  .feedback-row.compact {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .mandatory-feedback {
+    padding: 12px 12px;
+  }
+
+  .mandatory-feedback-header {
+    margin-bottom: 10px;
+  }
+
+  .mandatory-feedback .btn-group {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .mandatory-feedback .toggle-btn,
+  #btn-chat-feedback {
+    width: 100%;
+  }
+
+  .mandatory-feedback-actions {
+    gap: 10px;
+    padding-top: 12px;
   }
 
   .btn-send {
