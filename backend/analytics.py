@@ -6,6 +6,36 @@ from .utils import current_user_id, require_login
 analytics_bp = Blueprint("analytics", __name__)
 
 
+def phase_for_message(index: int, total_messages: int) -> str:
+    """FR16: split a session timeline into start, middle, and end phases."""
+    if total_messages <= 1:
+        return "Start phase"
+
+    progress = index / (total_messages - 1)
+    if progress < 0.34:
+        return "Start phase"
+    if progress < 0.67:
+        return "Middle phase"
+    return "End phase"
+
+
+def segment_session_messages(messages: list[dict]) -> dict:
+    """FR16: group stored session messages by conversation phase."""
+    phases = {
+        "Start phase": [],
+        "Middle phase": [],
+        "End phase": [],
+    }
+    total_messages = len(messages)
+
+    for index, message in enumerate(messages):
+        phase = phase_for_message(index, total_messages)
+        message["session_phase"] = phase
+        phases[phase].append(message)
+
+    return phases
+
+
 @analytics_bp.route("/api/analytics/sessions", methods=["GET"])
 @require_login
 def get_analytics_sessions():
@@ -53,6 +83,8 @@ def get_analytics_sessions():
     for row in session_rows:
         session_data = dict(row)
         session_data["messages"] = messages_by_session.get(row["id"], [])
+        # FR16: divide every session into start, middle, and end message groups.
+        session_data["phases"] = segment_session_messages(session_data["messages"])
         sessions.append(session_data)
 
     return jsonify({"sessions": sessions})
