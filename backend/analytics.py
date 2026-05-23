@@ -36,6 +36,89 @@ def segment_session_messages(messages: list[dict]) -> dict:
     return phases
 
 
+def accuracy_score(correctness: str | None) -> float | None:
+    """FR17: convert feedback correctness into a numeric accuracy score."""
+    scores = {
+        "Correct": 1.0,
+        "Partial": 0.5,
+        "Incorrect": 0.0,
+    }
+    return scores.get(correctness)
+
+
+def average(values: list[float]) -> float | None:
+    """FR17: return a rounded average when metric values exist."""
+    if not values:
+        return None
+    return round(sum(values) / len(values), 2)
+
+
+def compute_core_metrics(sessions: list[dict]) -> dict:
+    """FR17: compute accuracy, timing, rating, and length analytics."""
+    accuracy_per_reply = []
+    accuracy_by_topic = {}
+    accuracy_by_phase = {
+        "Start phase": [],
+        "Middle phase": [],
+        "End phase": [],
+    }
+    response_times = []
+    ratings = []
+    length_distribution = {
+        "Short": 0,
+        "To the Point": 0,
+        "Lengthy": 0,
+    }
+
+    for session_data in sessions:
+        for message in session_data["messages"]:
+            score = accuracy_score(message.get("correctness"))
+            if score is not None:
+                accuracy_per_reply.append({
+                    "message_id": message["id"],
+                    "session_id": message["session_id"],
+                    "accuracy": score,
+                })
+                topic = message.get("topic_label") or "general"
+                phase = message.get("session_phase") or "Start phase"
+                accuracy_by_topic.setdefault(topic, []).append(score)
+                accuracy_by_phase.setdefault(phase, []).append(score)
+
+            if message.get("response_time_ms") is not None:
+                response_times.append(message["response_time_ms"])
+
+            if message.get("rating") is not None:
+                ratings.append(message["rating"])
+
+            length_type = message.get("length_type")
+            if length_type in length_distribution:
+                length_distribution[length_type] += 1
+
+    # FR17: summarize grouped lists into concise analytics values.
+    return {
+        "accuracy_per_reply": accuracy_per_reply,
+        "accuracy_per_topic": {
+            topic: average(scores)
+            for topic, scores in accuracy_by_topic.items()
+        },
+        "accuracy_per_phase": {
+            phase: average(scores)
+            for phase, scores in accuracy_by_phase.items()
+        },
+        "response_time_statistics": {
+            "count": len(response_times),
+            "average_ms": average(response_times),
+            "minimum_ms": min(response_times) if response_times else None,
+            "maximum_ms": max(response_times) if response_times else None,
+        },
+        "rating_averages": {
+            "count": len(ratings),
+            "average": average(ratings),
+        },
+        "length_distribution": length_distribution,
+    }
+
+
 @analytics_bp.route("/api/analytics/sessions", methods=["GET"])
 @require_login
 def get_analytics_sessions():
@@ -87,4 +170,7 @@ def get_analytics_sessions():
         session_data["phases"] = segment_session_messages(session_data["messages"])
         sessions.append(session_data)
 
-    return jsonify({"sessions": sessions})
+    return jsonify({
+        "sessions": sessions,
+        "metrics": compute_core_metrics(sessions),
+    })
