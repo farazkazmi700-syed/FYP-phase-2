@@ -7,6 +7,7 @@ from flask_cors import CORS
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from backend.analytics import analytics_bp
     from backend.auth import auth_bp
     from backend.chat import chat_bp
     from backend.config import Config
@@ -14,6 +15,7 @@ if __package__ in (None, ""):
     from backend.feedback import feedback_bp
     from backend.utils import google_credentials_path
 else:
+    from .analytics import analytics_bp
     from .auth import auth_bp
     from .chat import chat_bp
     from .config import Config
@@ -39,6 +41,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(feedback_bp)
+    app.register_blueprint(analytics_bp)
 
     @app.route("/api/health", methods=["GET"])
     def health_check():
